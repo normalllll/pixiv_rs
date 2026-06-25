@@ -1,0 +1,43 @@
+mod bookmark_detail_result;
+mod bookmark_tag_page_result;
+mod comment_add_result;
+mod comment_page_result;
+mod error_message;
+mod illust_detail_result;
+mod illust_page_result;
+mod webview_novel;
+mod novel_list_result;
+pub(crate) mod page_list;
+mod search_autocomplete_result;
+mod search_illust_page_result;
+mod search_novel_page_result;
+mod stamp_list_result;
+mod trending_tag_list_result;
+mod ugoira_metadata_result;
+mod user_account_result;
+mod user_detail_result;
+mod user_page_result;
+
+mod novel_detail_result;
+
+pub use bookmark_detail_result::*;
+pub use bookmark_tag_page_result::*;
+pub use comment_add_result::*;
+pub use comment_page_result::*;
+pub use error_message::*;
+pub use illust_detail_result::*;
+pub use illust_page_result::*;
+pub use webview_novel::*;
+pub use novel_list_result::*;
+pub use search_autocomplete_result::*;
+pub use search_illust_page_result::*;
+pub use search_novel_page_result::*;
+pub use stamp_list_result::*;
+pub use trending_tag_list_result::*;
+pub use ugoira_metadata_result::*;
+pub use user_account_result::*;
+pub use user_detail_result::*;
+pub use user_page_result::*;
+pub use novel_detail_result::*;
+
+pub(crate) use page_list::PageList;
