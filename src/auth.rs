@@ -4,7 +4,7 @@ use std::time::Duration;
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use rand::random_range;
 use reqwest::header::{ACCEPT_LANGUAGE, HeaderMap, HeaderValue, USER_AGENT};
-use reqwest::{Client, Method, Url};
+use reqwest::{Client, Method, Proxy, Url};
 use sha2::{Digest, Sha256};
 
 use crate::error::{PixivError, PixivErrorKind};
@@ -22,6 +22,7 @@ pub struct PixivAuthConfig {
     pub language: String,
     pub device_name: String,
     pub accept_invalid_certs: bool,
+    pub proxy: Option<String>,
 }
 
 impl PixivAuthConfig {
@@ -31,6 +32,7 @@ impl PixivAuthConfig {
             language,
             device_name,
             accept_invalid_certs: false,
+            proxy: None,
         }
     }
 
@@ -60,6 +62,10 @@ impl PixivAuth {
 
     pub fn from_parts(target_ip: String, language: String, device_name: String) -> Self {
         Self::new(PixivAuthConfig::new(target_ip, language, device_name))
+    }
+
+    pub fn set_proxy(&mut self, proxy: String) {
+        self.config.proxy = Some(proxy);
     }
 
     pub fn code_verifier(&self) -> String {
@@ -152,6 +158,10 @@ impl PixivAuth {
 
         if let Ok(ip) = self.config.target_ip.parse::<IpAddr>() {
             builder = builder.resolve(OAUTH_HOST, SocketAddr::new(ip, 443));
+        }
+
+        if let Some(proxy) = &self.config.proxy {
+            builder = builder.proxy(Proxy::all(proxy)?);
         }
 
         Ok(builder.build()?)

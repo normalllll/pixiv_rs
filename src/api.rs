@@ -1,5 +1,5 @@
 use reqwest::header::{ACCEPT_LANGUAGE, AUTHORIZATION, HOST, HeaderMap, HeaderValue, USER_AGENT};
-use reqwest::{Client, Method, StatusCode, Url};
+use reqwest::{Client, Method, Proxy, StatusCode, Url};
 use serde::de::DeserializeOwned;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, RwLock};
@@ -7,7 +7,9 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
 use crate::auth::{PixivAuth, PixivAuthConfig};
-use crate::enums::{IllustType, PixivEnumParam, IllustRankingMode, Restrict, SearchSort, SearchTarget};
+use crate::enums::{
+    IllustRankingMode, IllustType, PixivEnumParam, Restrict, SearchSort, SearchTarget,
+};
 use crate::error::{PixivError, PixivErrorKind};
 use crate::responses::*;
 use crate::{MangaRankingMode, NovelRankingMode};
@@ -33,6 +35,7 @@ pub struct PixivApiConfig {
     pub language: String,
     pub account: Option<UserAccountResult>,
     pub accept_invalid_certs: bool,
+    pub proxy: Option<String>,
 }
 
 impl PixivApiConfig {
@@ -49,6 +52,7 @@ impl PixivApiConfig {
             language,
             account,
             accept_invalid_certs,
+            proxy: None,
         }
     }
 }
@@ -68,6 +72,7 @@ impl PixivApi {
             language: config.language.clone(),
             device_name: config.device_name.clone(),
             accept_invalid_certs: config.accept_invalid_certs,
+            proxy: config.proxy.clone(),
         });
         let account = Arc::new(RwLock::new(config.account.clone()));
 
@@ -91,6 +96,11 @@ impl PixivApi {
             .account
             .write()
             .unwrap_or_else(|poisoned| poisoned.into_inner()) = account;
+    }
+
+    pub fn set_proxy(&mut self, proxy: String) {
+        self.config.proxy = Some(proxy.clone());
+        self.auth.set_proxy(proxy);
     }
 
     pub async fn get_next_comment_page(
@@ -132,7 +142,6 @@ impl PixivApi {
     ) -> Result<BookmarkTagPageResult, PixivError> {
         self.get_next_page(url).await
     }
-
 
     pub async fn get_user_detail(&self, user_id: u64) -> Result<UserDetailResult, PixivError> {
         self.get_json(
@@ -214,7 +223,7 @@ impl PixivApi {
                 ("include_privacy_policy", true.to_string()),
             ]),
         )
-            .await
+        .await
     }
     pub async fn get_recommended_novel_page(&self) -> Result<NovelPageResult, PixivError> {
         self.get_json(
@@ -237,7 +246,7 @@ impl PixivApi {
             "/v1/illust/ranking",
             params!([("filter", "for_android"), ("mode", mode.to_string())]),
         )
-            .await
+        .await
     }
 
     pub async fn get_manga_ranking_page(
@@ -249,9 +258,8 @@ impl PixivApi {
             "/v1/illust/ranking",
             params!([("filter", "for_android"), ("mode", mode.to_string())]),
         )
-            .await
+        .await
     }
-
 
     pub async fn get_novel_ranking_page(
         &self,
@@ -262,7 +270,7 @@ impl PixivApi {
             "/v1/novel/ranking",
             params!([("filter", "for_android"), ("mode", mode.to_string())]),
         )
-            .await
+        .await
     }
 
     pub async fn get_trending_tag_list(&self) -> Result<TrendingTagListResult, PixivError> {
@@ -404,7 +412,7 @@ impl PixivApi {
                 ("novel_id", novel_id.to_string()),
             ]),
         )
-            .await
+        .await
     }
 
     pub async fn get_user_related_page(
@@ -421,7 +429,7 @@ impl PixivApi {
                 ("seed_user_id", seed_user_id.to_string()),
             ]),
         )
-            .await
+        .await
     }
 
     pub async fn get_illust_detail(
@@ -442,8 +450,8 @@ impl PixivApi {
     pub async fn get_webview_novel(&self, novel_id: u64) -> Result<WebviewNovel, PixivError> {
         let html = self.get_novel_html(novel_id).await?;
 
-        let json_str = extract_json_object_after_key(&html, "novel:")
-            .ok_or_else(|| PixivError {
+        let json_str =
+            extract_json_object_after_key(&html, "novel:").ok_or_else(|| PixivError {
                 kind: PixivErrorKind::Json,
                 message: "extract novel object failed".to_owned(),
                 status: None,
@@ -526,7 +534,7 @@ impl PixivApi {
             "/v3/illust/comments",
             params!([("illust_id", illust_id.to_string())]),
         )
-            .await
+        .await
     }
 
     pub async fn get_novel_comment_page(
@@ -538,7 +546,7 @@ impl PixivApi {
             "/v3/novel/comments",
             params!([("novel_id", novel_id.to_string())]),
         )
-            .await
+        .await
     }
 
     pub async fn get_search_autocomplete(
@@ -719,7 +727,7 @@ impl PixivApi {
             "/v1/illust/comment/add",
             RequestBody::Form(form),
         )
-            .await
+        .await
     }
 
     pub async fn post_illust_comment_delete(&self, comment_id: u64) -> Result<String, PixivError> {
@@ -730,7 +738,7 @@ impl PixivApi {
             Vec::new(),
             RequestBody::Form(params!([("comment_id", comment_id.to_string())])),
         )
-            .await
+        .await
     }
 
     pub async fn post_novel_comment_add(
@@ -758,7 +766,7 @@ impl PixivApi {
             "/v1/novel/comment/add",
             RequestBody::Form(form),
         )
-            .await
+        .await
     }
 
     pub async fn post_novel_comment_delete(&self, comment_id: u64) -> Result<String, PixivError> {
@@ -769,7 +777,7 @@ impl PixivApi {
             Vec::new(),
             RequestBody::Form(params!([("comment_id", comment_id.to_string())])),
         )
-            .await
+        .await
     }
 
     async fn get_next_page<T>(&self, url: String) -> Result<T, PixivError>
@@ -881,6 +889,10 @@ impl PixivApi {
 
         if let Some(addr) = resolve_addr {
             builder = builder.resolve(logical_host, addr);
+        }
+
+        if let Some(proxy) = &self.config.proxy {
+            builder = builder.proxy(Proxy::all(proxy)?);
         }
 
         Ok(builder.build()?)
