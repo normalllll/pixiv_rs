@@ -1,7 +1,7 @@
 use async_stream::try_stream;
 use futures_core::{Stream, TryStream};
 use futures_util::TryStreamExt;
-use reqwest::{Client, Response};
+use reqwest::{header, Client, Response};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -136,7 +136,7 @@ async fn send_request(
         _ = cancel_token.cancelled() => {
             Err(cancelled_error())
         }
-        response = client.get(url).send() => {
+        response = client.get(url).header(header::REFERER, "https://www.pixiv.net/").send() => {
             response.map_err(Into::into)
         }
     }
