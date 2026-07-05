@@ -2,6 +2,7 @@ use async_stream::try_stream;
 use futures_core::{Stream, TryStream};
 use futures_util::TryStreamExt;
 use reqwest::{Client, Proxy, Response, header};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -183,6 +184,47 @@ async fn remove_file_if_exists(path: &Path) -> Result<(), PixivError> {
     }
 }
 
+fn temp_path_for(path: &Path) -> PathBuf {
+    let mut filename = path
+        .file_name()
+        .map(OsString::from)
+        .unwrap_or_else(|| OsString::from("download"));
+    filename.push(".tmp");
+
+    path.parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .map(|parent| parent.join(&filename))
+        .unwrap_or_else(|| PathBuf::from(filename))
+}
+
+async fn move_file_with_fallback(from: &Path, to: &Path) -> Result<(), PixivError> {
+    match fs::rename(from, to).await {
+        Ok(_) => return Ok(()),
+        Err(first_rename_error) => {
+            remove_file_if_exists(to).await?;
+
+            match fs::rename(from, to).await {
+                Ok(_) => return Ok(()),
+                Err(second_rename_error) => {
+                    if let Err(copy_error) = fs::copy(from, to).await {
+                        let _ = fs::remove_file(to).await;
+                        return Err(PixivError::new(
+                            PixivErrorKind::HttpClient,
+                            format!(
+                                "Move temp file failed: firstRename={first_rename_error}, secondRename={second_rename_error}, copy={copy_error}"
+                            ),
+                        ));
+                    }
+
+                    let _ = fs::remove_file(from).await;
+
+                    Ok(())
+                }
+            }
+        }
+    }
+}
+
 pub fn download_to_memory(
     url: String,
     proxy: Option<String>,
@@ -240,7 +282,7 @@ pub fn download_to_file(
         let response = send_request(&client, &url, &stream_cancel_token).await?;
         let (response, total_size) = check_response(response).await?;
 
-        let tmp_path = PathBuf::from(&path);
+        let tmp_path = temp_path_for(&path);
 
         if let Some(parent) = path.parent() {
             if !parent.as_os_str().is_empty() {
@@ -297,21 +339,7 @@ pub fn download_to_file(
 
         drop(writer);
 
-        #[cfg(windows)]
-        {
-            remove_file_if_exists(&path).await?;
-
-            fs::rename(&tmp_path, &path)
-                .await
-                .map_err(|error| io_error("Rename temp file failed", error))?;
-        }
-
-        #[cfg(not(windows))]
-        {
-            fs::rename(&tmp_path, &path)
-                .await
-                .map_err(|error| io_error("Rename temp file failed", error))?;
-        }
+        move_file_with_fallback(&tmp_path, &path).await?;
 
         yield DownloadEvent::Done { output: path };
     };
