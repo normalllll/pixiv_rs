@@ -1,7 +1,7 @@
 use async_stream::try_stream;
 use futures_core::{Stream, TryStream};
 use futures_util::TryStreamExt;
-use reqwest::{header, Client, Response};
+use reqwest::{Client, Proxy, Response, header};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -93,17 +93,11 @@ impl ProgressTracker {
 }
 
 fn cancelled_error() -> PixivError {
-    PixivError::new(
-        PixivErrorKind::HttpClient,
-        "Download cancelled".to_owned(),
-    )
+    PixivError::new(PixivErrorKind::HttpClient, "Download cancelled".to_owned())
 }
 
 fn content_length_error() -> PixivError {
-    PixivError::new(
-        PixivErrorKind::HttpClient,
-        "No content length".to_owned(),
-    )
+    PixivError::new(PixivErrorKind::HttpClient, "No content length".to_owned())
 }
 
 fn content_length_overflow_error() -> PixivError {
@@ -121,10 +115,7 @@ fn incomplete_download_error(received: usize, total: usize) -> PixivError {
 }
 
 fn io_error(context: &str, error: std::io::Error) -> PixivError {
-    PixivError::new(
-        PixivErrorKind::HttpClient,
-        format!("{context}: {error}"),
-    )
+    PixivError::new(PixivErrorKind::HttpClient, format!("{context}: {error}"))
 }
 
 async fn send_request(
@@ -142,6 +133,16 @@ async fn send_request(
     }
 }
 
+fn download_client(proxy: Option<&str>) -> Result<Client, PixivError> {
+    let mut builder = Client::builder();
+
+    if let Some(proxy) = proxy {
+        builder = builder.proxy(Proxy::all(proxy)?);
+    }
+
+    Ok(builder.build()?)
+}
+
 async fn check_response(response: Response) -> Result<(Response, usize), PixivError> {
     let status = response.status();
 
@@ -150,12 +151,9 @@ async fn check_response(response: Response) -> Result<(Response, usize), PixivEr
         return Err(PixivError::http_status(status.as_u16(), body));
     }
 
-    let total_size = response
-        .content_length()
-        .ok_or_else(content_length_error)?;
+    let total_size = response.content_length().ok_or_else(content_length_error)?;
 
-    let total_size = usize::try_from(total_size)
-        .map_err(|_| content_length_overflow_error())?;
+    let total_size = usize::try_from(total_size).map_err(|_| content_length_overflow_error())?;
 
     Ok((response, total_size))
 }
@@ -177,7 +175,6 @@ where
     }
 }
 
-
 async fn remove_file_if_exists(path: &Path) -> Result<(), PixivError> {
     match fs::remove_file(path).await {
         Ok(_) => Ok(()),
@@ -186,12 +183,15 @@ async fn remove_file_if_exists(path: &Path) -> Result<(), PixivError> {
     }
 }
 
-pub fn download_to_memory(url: String) -> Result<MemoryDownloadStream, PixivError> {
+pub fn download_to_memory(
+    url: String,
+    proxy: Option<String>,
+) -> Result<MemoryDownloadStream, PixivError> {
     let cancel_token = CancellationToken::new();
     let stream_cancel_token = cancel_token.clone();
 
     let stream = try_stream! {
-        let client = Client::new();
+        let client = download_client(proxy.as_deref())?;
 
         let response = send_request(&client, &url, &stream_cancel_token).await?;
         let (response, total_size) = check_response(response).await?;
@@ -226,12 +226,16 @@ pub fn download_to_memory(url: String) -> Result<MemoryDownloadStream, PixivErro
     Ok(DownloadStream::new(cancel_token, Box::pin(stream)))
 }
 
-pub fn download_to_file(url: String, path: PathBuf) -> Result<FileDownloadStream, PixivError> {
+pub fn download_to_file(
+    url: String,
+    path: PathBuf,
+    proxy: Option<String>,
+) -> Result<FileDownloadStream, PixivError> {
     let cancel_token = CancellationToken::new();
     let stream_cancel_token = cancel_token.clone();
 
     let stream = try_stream! {
-        let client = Client::new();
+        let client = download_client(proxy.as_deref())?;
 
         let response = send_request(&client, &url, &stream_cancel_token).await?;
         let (response, total_size) = check_response(response).await?;
