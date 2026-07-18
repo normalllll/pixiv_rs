@@ -148,8 +148,9 @@ async fn check_response(response: Response) -> Result<(Response, usize), PixivEr
     let status = response.status();
 
     if !status.is_success() {
+        let response_url = response.url().to_string();
         let body = response.text().await.unwrap_or_default();
-        return Err(PixivError::http_status(status.as_u16(), body));
+        return Err(PixivError::http_status(status.as_u16(), body).with_url(response_url));
     }
 
     let total_size = response.content_length().ok_or_else(content_length_error)?;

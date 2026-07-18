@@ -1,4 +1,4 @@
-use reqwest::header::{ACCEPT_LANGUAGE, AUTHORIZATION, HOST, HeaderMap, HeaderValue, USER_AGENT};
+use reqwest::header::{ACCEPT_LANGUAGE, AUTHORIZATION, HeaderMap, HeaderValue, USER_AGENT};
 use reqwest::{Client, Method, Proxy, StatusCode, Url};
 use serde::de::DeserializeOwned;
 use std::net::{IpAddr, SocketAddr};
@@ -456,6 +456,7 @@ impl PixivApi {
                 message: "extract novel object failed".to_owned(),
                 status: None,
                 body: Some(html.to_owned()),
+                url: None,
             })?;
 
         serde_json::from_str::<WebviewNovel>(json_str).map_err(|err| PixivError {
@@ -463,6 +464,7 @@ impl PixivApi {
             message: format!("parse novel object failed: {err}"),
             status: None,
             body: Some(json_str.to_owned()),
+            url: None,
         })
     }
 
@@ -842,7 +844,11 @@ impl PixivApi {
             }
         }
 
-        Err(http_status_error(response.status, response.body))
+        Err(http_status_error(
+            response.status,
+            response.body,
+            response.url,
+        ))
     }
 
     fn build_request(
@@ -853,27 +859,13 @@ impl PixivApi {
         query: Params,
         body: RequestBody,
     ) -> Result<ApiRequest, PixivError> {
-        let connect_target = endpoint.connect_target(self);
         let logical_host = endpoint.logical_host();
-        let resolve_addr = resolve_addr(&connect_target);
-        let mut url = endpoint_url(logical_host, path)?;
-        let mut host_header = None;
-
-        if resolve_addr.is_none() && connect_target != logical_host {
-            url.set_host(Some(&connect_target)).map_err(|_| {
-                PixivError::new(PixivErrorKind::InvalidEndpoint, connect_target.clone())
-            })?;
-            host_header = Some(logical_host.to_owned());
-        }
-
-        let client = self.client(logical_host, resolve_addr)?;
         Ok(ApiRequest {
-            client,
+            endpoint,
             method,
-            url,
+            url: endpoint_url(logical_host, path)?,
             query,
             body,
-            host_header,
         })
     }
 
@@ -887,18 +879,18 @@ impl PixivApi {
             .timeout(Duration::from_secs(5))
             .danger_accept_invalid_certs(self.config.accept_invalid_certs);
 
-        if let Some(addr) = resolve_addr {
-            builder = builder.resolve(logical_host, addr);
-        }
-
         if let Some(proxy) = &self.config.proxy {
             builder = builder.proxy(Proxy::all(proxy)?);
+        } else if let Some(addr) = resolve_addr {
+            // Reserved for an explicitly enabled direct-IP mode. Normal API
+            // requests currently always pass None and use the logical host.
+            builder = builder.no_proxy().resolve(logical_host, addr);
         }
 
         Ok(builder.build()?)
     }
 
-    fn headers(&self, host_header: Option<&str>) -> Result<HeaderMap, PixivError> {
+    fn headers(&self) -> Result<HeaderMap, PixivError> {
         let mut headers = HeaderMap::new();
         headers.insert(
             USER_AGENT,
@@ -912,10 +904,6 @@ impl PixivApi {
             HeaderValue::from_str(&self.config.language)?,
         );
 
-        if let Some(host) = host_header {
-            headers.insert(HOST, HeaderValue::from_str(host)?);
-        }
-
         if let Some(account) = self.account() {
             headers.insert(
                 AUTHORIZATION,
@@ -927,31 +915,27 @@ impl PixivApi {
     }
 
     async fn send_with_retry(&self, request: &ApiRequest) -> Result<RawResponse, PixivError> {
-        let mut last_error = None;
         for attempt in 0..=2 {
-            match self.send_once(request).await {
+            match self.send_once(request, None).await {
+                Ok(response) if is_retryable_gateway_status(response.status) && attempt < 2 => {}
                 Ok(response) => return Ok(response),
-                Err(error) => {
-                    if error.kind == PixivErrorKind::HttpClient
-                        && is_retryable_error_message(&error.message)
-                        && attempt < 2
-                    {
-                        last_error = Some(error);
-                    } else {
-                        return Err(error);
-                    }
-                }
+                Err(error) if is_retryable_http_client_error(&error) && attempt < 2 => {}
+                Err(error) => return Err(error),
             }
         }
 
-        Err(last_error.expect("retry loop always records an error"))
+        unreachable!("the final request attempt always returns")
     }
 
-    async fn send_once(&self, request: &ApiRequest) -> Result<RawResponse, PixivError> {
-        let mut builder = request
-            .client
+    async fn send_once(
+        &self,
+        request: &ApiRequest,
+        resolve_addr: Option<SocketAddr>,
+    ) -> Result<RawResponse, PixivError> {
+        let client = self.client(request.endpoint.logical_host(), resolve_addr)?;
+        let mut builder = client
             .request(request.method.clone(), request.url.clone())
-            .headers(self.headers(request.host_header.as_deref())?)
+            .headers(self.headers()?)
             .query(&request.query);
 
         match &request.body {
@@ -963,8 +947,9 @@ impl PixivApi {
 
         let response = builder.send().await?;
         let status = response.status();
+        let url = response.url().to_string();
         let body = response.text().await?;
-        Ok(RawResponse { status, body })
+        Ok(RawResponse { status, body, url })
     }
 
     async fn refresh_auth_token_if_needed(&self) -> Result<(), PixivError> {
@@ -1069,10 +1054,11 @@ impl Endpoint {
         }
     }
 
-    fn connect_target(self, api: &PixivApi) -> String {
+    #[allow(dead_code)]
+    fn direct_ip_addr(self, api: &PixivApi) -> Option<SocketAddr> {
         match self {
-            Self::AppApi => api.config.target_ip.clone(),
-            Self::Sketch => SKETCH_IP.to_owned(),
+            Self::AppApi => resolve_addr(&api.config.target_ip),
+            Self::Sketch => resolve_addr(SKETCH_IP),
         }
     }
 }
@@ -1084,17 +1070,17 @@ enum RequestBody {
 }
 
 struct ApiRequest {
-    client: Client,
+    endpoint: Endpoint,
     method: Method,
     url: Url,
     query: Params,
     body: RequestBody,
-    host_header: Option<String>,
 }
 
 struct RawResponse {
     status: StatusCode,
     body: String,
+    url: String,
 }
 
 fn push_optional(params: &mut Params, key: &str, value: Option<String>) {
@@ -1138,10 +1124,20 @@ fn resolve_addr(target: &str) -> Option<SocketAddr> {
     })
 }
 
-fn is_retryable_error_message(message: &str) -> bool {
-    message.contains("Connection closed before full header was received")
-        || message.contains("Connection terminated during handshake")
-        || message.contains("timed out")
+fn is_retryable_http_client_error(error: &PixivError) -> bool {
+    if error.kind != PixivErrorKind::HttpClient {
+        return false;
+    }
+
+    let message = error.message.to_ascii_lowercase();
+    !message.contains("builder error") && !message.contains("unknown proxy scheme")
+}
+
+fn is_retryable_gateway_status(status: StatusCode) -> bool {
+    matches!(
+        status,
+        StatusCode::BAD_GATEWAY | StatusCode::SERVICE_UNAVAILABLE | StatusCode::GATEWAY_TIMEOUT
+    )
 }
 
 fn is_oauth_error(body: &str) -> bool {
@@ -1152,8 +1148,8 @@ fn is_oauth_error(body: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn http_status_error(status: StatusCode, body: String) -> PixivError {
-    PixivError::http_status(status.as_u16(), body)
+fn http_status_error(status: StatusCode, body: String, url: String) -> PixivError {
+    PixivError::http_status(status.as_u16(), body).with_url(url)
 }
 
 fn extract_json_object_after_key<'a>(src: &'a str, key: &str) -> Option<&'a str> {
@@ -1205,4 +1201,54 @@ fn extract_json_object_after_key<'a>(src: &'a str, key: &str) -> Option<&'a str>
     }
 
     None
+}
+
+#[cfg(test)]
+mod connection_tests {
+    use super::*;
+
+    fn api_with_target(target_ip: &str) -> PixivApi {
+        PixivApi::new(PixivApiConfig::new(
+            target_ip.to_owned(),
+            "en-US".to_owned(),
+            "android".to_owned(),
+            None,
+            false,
+        ))
+    }
+
+    #[test]
+    fn api_request_uses_logical_hostname_first() {
+        let api = api_with_target("210.140.170.179");
+        let request = api
+            .build_request(
+                Endpoint::AppApi,
+                Method::GET,
+                "/v1/user/detail",
+                Vec::new(),
+                RequestBody::None,
+            )
+            .unwrap();
+
+        assert_eq!(request.url.host_str(), Some(APP_API_HOST));
+        assert_eq!(
+            request.endpoint.direct_ip_addr(&api),
+            Some("210.140.170.179:443".parse().unwrap())
+        );
+    }
+
+    #[test]
+    fn invalid_target_disables_api_ip_fallback() {
+        let api = api_with_target("not-an-ip");
+        assert_eq!(Endpoint::AppApi.direct_ip_addr(&api), None);
+    }
+
+    #[test]
+    fn only_gateway_failures_are_retried_as_http_statuses() {
+        assert!(is_retryable_gateway_status(StatusCode::BAD_GATEWAY));
+        assert!(is_retryable_gateway_status(StatusCode::SERVICE_UNAVAILABLE));
+        assert!(is_retryable_gateway_status(StatusCode::GATEWAY_TIMEOUT));
+        assert!(!is_retryable_gateway_status(StatusCode::BAD_REQUEST));
+        assert!(!is_retryable_gateway_status(StatusCode::UNAUTHORIZED));
+    }
 }
