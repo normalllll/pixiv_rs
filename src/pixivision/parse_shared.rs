@@ -1,4 +1,4 @@
-use super::{ArticleLink, ArticleSummary, Tag};
+use super::{ArticleLink, ArticleSummary, PixivisionTag};
 use crate::{PixivError, PixivErrorKind};
 use reqwest::Url;
 use scraper::{ElementRef, Html, Selector};
@@ -93,16 +93,16 @@ pub(super) fn route_id(url: &str, segment: &str) -> Option<u64> {
     parts.get(2)?.parse().ok()
 }
 
-pub(super) fn tag(element: ElementRef<'_>, base: &Url) -> Option<Tag> {
+pub(super) fn tag(element: ElementRef<'_>, base: &Url) -> Option<PixivisionTag> {
     let link = link(element, base)?;
-    Some(Tag {
+    Some(PixivisionTag {
         id: route_id(&link.url, "t")?,
         name: link.title,
         url: link.url,
     })
 }
 
-pub(super) fn tags(root: ElementRef<'_>, base: &Url) -> Vec<Tag> {
+pub(super) fn tags(root: ElementRef<'_>, base: &Url) -> Vec<PixivisionTag> {
     let mut seen = HashSet::new();
     root.select(&select("a[href]"))
         .filter_map(|a| tag(a, base))

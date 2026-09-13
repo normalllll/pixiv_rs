@@ -89,7 +89,7 @@ pub struct ArticleSummary {
     pub thumbnail: Option<String>,
     pub publish_date: Option<String>,
     pub category: Option<ArticleLink>,
-    pub tags: Vec<Tag>,
+    pub tags: Vec<PixivisionTag>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -106,7 +106,7 @@ pub struct ArticlePage {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Tag {
+pub struct PixivisionTag {
     pub id: u64,
     pub name: String,
     pub url: String,
@@ -127,7 +127,7 @@ pub struct TagGroup {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TagNode {
     pub name: String,
-    pub tag: Option<Tag>,
+    pub tag: Option<PixivisionTag>,
     pub article_count: Option<u64>,
     pub children: Vec<TagNode>,
 }
@@ -142,7 +142,7 @@ pub struct Article {
     pub thumbnail: Option<String>,
     pub publish_date: String,
     pub category: Option<ArticleLink>,
-    pub tags: Vec<Tag>,
+    pub tags: Vec<PixivisionTag>,
     pub translations: Vec<ArticleLink>,
     /// Source order is retained, including unknown block types and article cards.
     pub blocks: Vec<ArticleBlock>,

@@ -1,6 +1,7 @@
 /// flutter_rust_bridge:ignore
 pub mod download;
 pub mod error;
+pub mod fanbox;
 pub mod pixiv;
 pub mod pixivision;
 
