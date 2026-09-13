@@ -1,0 +1,172 @@
+{
+  "next_url": "https://app-api.pixiv.net/v2/novel/series?series_id=1&last_order=1",
+  "novel_series_detail": {
+    "caption": "fixture",
+    "content_count": 1,
+    "display_text": "fixture",
+    "id": 1,
+    "is_concluded": false,
+    "is_original": false,
+    "novel_ai_type": 1,
+    "title": "fixture",
+    "total_character_count": 1,
+    "user": {
+      "account": "fixture",
+      "id": 1,
+      "is_accept_request": false,
+      "is_access_blocking_user": false,
+      "is_followed": false,
+      "name": "fixture",
+      "profile_image_urls": {
+        "medium": "https://example.invalid/image.jpg"
+      }
+    },
+    "watchlist_added": false
+  },
+  "novel_series_first_novel": {
+    "caption": "fixture",
+    "create_date": "2026-01-01T00:00:00+09:00",
+    "id": 1,
+    "image_urls": {
+      "large": "https://example.invalid/image.jpg",
+      "medium": "https://example.invalid/image.jpg",
+      "square_medium": "https://example.invalid/image.jpg"
+    },
+    "is_bookmarked": false,
+    "is_muted": false,
+    "is_mypixiv_only": false,
+    "is_original": false,
+    "is_x_restricted": false,
+    "novel_ai_type": 1,
+    "page_count": 1,
+    "request": null,
+    "restrict": 1,
+    "series": {
+      "id": 1,
+      "title": "fixture"
+    },
+    "tags": [
+      {
+        "added_by_uploaded_user": false,
+        "name": "fixture",
+        "translated_name": "fixture"
+      }
+    ],
+    "text_length": 1,
+    "title": "fixture",
+    "total_bookmarks": 1,
+    "total_comments": 1,
+    "total_view": 1,
+    "user": {
+      "account": "fixture",
+      "id": 1,
+      "is_accept_request": false,
+      "is_access_blocking_user": false,
+      "is_followed": false,
+      "name": "fixture",
+      "profile_image_urls": {
+        "medium": "https://example.invalid/image.jpg"
+      }
+    },
+    "visible": false,
+    "x_restrict": 1
+  },
+  "novel_series_latest_novel": {
+    "caption": "fixture",
+    "create_date": "2026-01-01T00:00:00+09:00",
+    "id": 1,
+    "image_urls": {
+      "large": "https://example.invalid/image.jpg",
+      "medium": "https://example.invalid/image.jpg",
+      "square_medium": "https://example.invalid/image.jpg"
+    },
+    "is_bookmarked": false,
+    "is_muted": false,
+    "is_mypixiv_only": false,
+    "is_original": false,
+    "is_x_restricted": false,
+    "novel_ai_type": 1,
+    "page_count": 1,
+    "request": null,
+    "restrict": 1,
+    "series": {
+      "id": 1,
+      "title": "fixture"
+    },
+    "tags": [
+      {
+        "added_by_uploaded_user": false,
+        "name": "fixture",
+        "translated_name": "fixture"
+      }
+    ],
+    "text_length": 1,
+    "title": "fixture",
+    "total_bookmarks": 1,
+    "total_comments": 1,
+    "total_view": 1,
+    "user": {
+      "account": "fixture",
+      "id": 1,
+      "is_accept_request": false,
+      "is_access_blocking_user": false,
+      "is_followed": false,
+      "name": "fixture",
+      "profile_image_urls": {
+        "medium": "https://example.invalid/image.jpg"
+      }
+    },
+    "visible": false,
+    "x_restrict": 1
+  },
+  "novels": [
+    {
+      "caption": "fixture",
+      "create_date": "2026-01-01T00:00:00+09:00",
+      "id": 1,
+      "image_urls": {
+        "large": "https://example.invalid/image.jpg",
+        "medium": "https://example.invalid/image.jpg",
+        "square_medium": "https://example.invalid/image.jpg"
+      },
+      "is_bookmarked": false,
+      "is_muted": false,
+      "is_mypixiv_only": false,
+      "is_original": false,
+      "is_x_restricted": false,
+      "novel_ai_type": 1,
+      "page_count": 1,
+      "request": null,
+      "restrict": 1,
+      "series": {
+        "id": 1,
+        "title": "fixture"
+      },
+      "tags": [
+        {
+          "added_by_uploaded_user": false,
+          "name": "fixture",
+          "translated_name": "fixture"
+        }
+      ],
+      "text_length": 1,
+      "title": "fixture",
+      "total_bookmarks": 1,
+      "total_comments": 1,
+      "total_view": 1,
+      "user": {
+        "account": "fixture",
+        "id": 1,
+        "is_accept_request": false,
+        "is_access_blocking_user": false,
+        "is_followed": false,
+        "name": "fixture",
+        "profile_image_urls": {
+          "medium": "https://example.invalid/image.jpg"
+        }
+      },
+      "visible": false,
+      "x_restrict": 1
+    }
+  ]
+}

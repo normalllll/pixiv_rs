@@ -5,6 +5,8 @@ use super::{ImageUrls, MetaPage, MetaSinglePage, Tag, User};
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Illust {
     pub id: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub series: Option<super::Series>,
     pub title: String,
     #[serde(rename = "type")]
     pub kind: String,

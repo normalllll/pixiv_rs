@@ -22,6 +22,12 @@ macro_rules! params {
     };
 }
 
+mod bookmarks;
+mod discovery;
+mod series;
+pub use bookmarks::BookmarkPageOptions;
+pub use discovery::SearchAiMode;
+
 const APP_API_HOST: &str = "app-api.pixiv.net";
 const SKETCH_HOST: &str = "sketch.pixiv.net";
 const SKETCH_IP: &str = "210.140.170.179";
@@ -157,13 +163,12 @@ impl PixivApi {
         user_id: u64,
         restrict: Restrict,
     ) -> Result<IllustPageResult, PixivError> {
-        self.get_json(
-            Endpoint::AppApi,
-            "/v1/user/bookmarks/illust",
-            params!([
-                ("user_id", user_id.to_string()),
-                ("restrict", restrict.to_string()),
-            ]),
+        self.get_user_illust_bookmark_page_with_options(
+            user_id,
+            BookmarkPageOptions {
+                restrict,
+                ..Default::default()
+            },
         )
         .await
     }
@@ -173,13 +178,12 @@ impl PixivApi {
         user_id: u64,
         restrict: Restrict,
     ) -> Result<NovelPageResult, PixivError> {
-        self.get_json(
-            Endpoint::AppApi,
-            "/v1/user/bookmarks/novel",
-            params!([
-                ("user_id", user_id.to_string()),
-                ("restrict", restrict.to_string()),
-            ]),
+        self.get_user_novel_bookmark_page_with_options(
+            user_id,
+            BookmarkPageOptions {
+                restrict,
+                ..Default::default()
+            },
         )
         .await
     }
@@ -419,7 +423,7 @@ impl PixivApi {
         &self,
         offset: i32,
         seed_user_id: u64,
-    ) -> Result<IllustPageResult, PixivError> {
+    ) -> Result<UserPageResult, PixivError> {
         self.get_json(
             Endpoint::AppApi,
             "/v1/user/related",
@@ -573,6 +577,18 @@ impl PixivApi {
         target: SearchTarget,
         options: SearchOptions,
     ) -> Result<SearchIllustPageResult, PixivError> {
+        self.get_search_illust_page_with_ai(word, sort, target, options, None)
+            .await
+    }
+
+    pub async fn get_search_illust_page_with_ai(
+        &self,
+        word: String,
+        sort: SearchSort,
+        target: SearchTarget,
+        options: SearchOptions,
+        ai_mode: Option<SearchAiMode>,
+    ) -> Result<SearchIllustPageResult, PixivError> {
         let mut query = params!([
             ("filter", "for_android"),
             ("include_translated_tag_results", true.to_string()),
@@ -583,6 +599,8 @@ impl PixivApi {
         ]);
         push_optional(&mut query, "start_date", options.start_date);
         push_optional(&mut query, "end_date", options.end_date);
+
+        discovery::push_search_ai(&mut query, ai_mode);
 
         self.get_json(Endpoint::AppApi, "/v1/search/illust", query)
             .await
@@ -1252,3 +1270,7 @@ mod connection_tests {
         assert!(!is_retryable_gateway_status(StatusCode::UNAUTHORIZED));
     }
 }
+
+#[cfg(test)]
+#[path = "api/live_tests.rs"]
+mod live_tests;

@@ -5,7 +5,6 @@ mod comment_page_result;
 mod error_message;
 mod illust_detail_result;
 mod illust_page_result;
-mod webview_novel;
 mod novel_list_result;
 pub(crate) mod page_list;
 mod search_autocomplete_result;
@@ -17,6 +16,7 @@ mod ugoira_metadata_result;
 mod user_account_result;
 mod user_detail_result;
 mod user_page_result;
+mod webview_novel;
 
 mod novel_detail_result;
 
@@ -27,7 +27,7 @@ pub use comment_page_result::*;
 pub use error_message::*;
 pub use illust_detail_result::*;
 pub use illust_page_result::*;
-pub use webview_novel::*;
+pub use novel_detail_result::*;
 pub use novel_list_result::*;
 pub use search_autocomplete_result::*;
 pub use search_illust_page_result::*;
@@ -38,6 +38,11 @@ pub use ugoira_metadata_result::*;
 pub use user_account_result::*;
 pub use user_detail_result::*;
 pub use user_page_result::*;
-pub use novel_detail_result::*;
+pub use webview_novel::*;
 
 pub(crate) use page_list::PageList;
+
+mod series_page_result;
+pub use series_page_result::*;
+mod work_bookmark_detail_result;
+pub use work_bookmark_detail_result::*;

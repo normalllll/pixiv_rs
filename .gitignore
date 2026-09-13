@@ -1,3 +1,7 @@
 /target
 .idea
 Cargo.lock
+# Local live API credentials and captured responses
+/.local/
+/.env
+/.env.*

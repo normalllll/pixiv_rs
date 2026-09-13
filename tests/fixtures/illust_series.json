@@ -1,0 +1,149 @@
+{
+  "illust_series_detail": {
+    "caption": "fixture",
+    "cover_image_urls": {
+      "medium": "https://example.invalid/image.jpg"
+    },
+    "create_date": "2026-01-01T00:00:00+09:00",
+    "height": 1,
+    "id": 1,
+    "series_work_count": 1,
+    "title": "fixture",
+    "user": {
+      "account": "fixture",
+      "id": 1,
+      "is_accept_request": false,
+      "is_followed": false,
+      "name": "fixture",
+      "profile_image_urls": {
+        "medium": "https://example.invalid/image.jpg"
+      }
+    },
+    "watchlist_added": false,
+    "width": 1
+  },
+  "illust_series_first_illust": {
+    "caption": "fixture",
+    "create_date": "2026-01-01T00:00:00+09:00",
+    "event_banners": null,
+    "height": 1,
+    "id": 1,
+    "illust_ai_type": 1,
+    "illust_book_style": 1,
+    "image_urls": {
+      "large": "https://example.invalid/image.jpg",
+      "medium": "https://example.invalid/image.jpg",
+      "square_medium": "https://example.invalid/image.jpg"
+    },
+    "is_bookmarked": false,
+    "is_muted": false,
+    "meta_pages": [
+      {
+        "image_urls": {
+          "large": "https://example.invalid/image.jpg",
+          "medium": "https://example.invalid/image.jpg",
+          "original": "https://example.invalid/image.jpg",
+          "square_medium": "https://example.invalid/image.jpg"
+        }
+      }
+    ],
+    "meta_single_page": {},
+    "page_count": 1,
+    "request": null,
+    "restrict": 1,
+    "sanity_level": 1,
+    "seasonal_effect_animation_urls": null,
+    "series": {
+      "id": 1,
+      "title": "fixture"
+    },
+    "tags": [
+      {
+        "name": "fixture",
+        "translated_name": "fixture"
+      }
+    ],
+    "title": "fixture",
+    "tools": [],
+    "total_bookmarks": 1,
+    "total_comments": 1,
+    "total_view": 1,
+    "type": "manga",
+    "user": {
+      "account": "fixture",
+      "id": 1,
+      "is_accept_request": false,
+      "is_followed": false,
+      "name": "fixture",
+      "profile_image_urls": {
+        "medium": "https://example.invalid/image.jpg"
+      }
+    },
+    "visible": false,
+    "width": 1,
+    "x_restrict": 1
+  },
+  "illusts": [
+    {
+      "caption": "fixture",
+      "create_date": "2026-01-01T00:00:00+09:00",
+      "event_banners": null,
+      "height": 1,
+      "id": 1,
+      "illust_ai_type": 1,
+      "illust_book_style": 1,
+      "image_urls": {
+        "large": "https://example.invalid/image.jpg",
+        "medium": "https://example.invalid/image.jpg",
+        "square_medium": "https://example.invalid/image.jpg"
+      },
+      "is_bookmarked": false,
+      "is_muted": false,
+      "meta_pages": [
+        {
+          "image_urls": {
+            "large": "https://example.invalid/image.jpg",
+            "medium": "https://example.invalid/image.jpg",
+            "original": "https://example.invalid/image.jpg",
+            "square_medium": "https://example.invalid/image.jpg"
+          }
+        }
+      ],
+      "meta_single_page": {},
+      "page_count": 1,
+      "request": null,
+      "restrict": 1,
+      "sanity_level": 1,
+      "seasonal_effect_animation_urls": null,
+      "series": {
+        "id": 1,
+        "title": "fixture"
+      },
+      "tags": [
+        {
+          "name": "fixture",
+          "translated_name": "fixture"
+        }
+      ],
+      "title": "fixture",
+      "tools": [],
+      "total_bookmarks": 1,
+      "total_view": 1,
+      "type": "manga",
+      "user": {
+        "account": "fixture",
+        "id": 1,
+        "is_accept_request": false,
+        "is_followed": false,
+        "name": "fixture",
+        "profile_image_urls": {
+          "medium": "https://example.invalid/image.jpg"
+        }
+      },
+      "visible": false,
+      "width": 1,
+      "x_restrict": 1
+    }
+  ],
+  "next_url": "https://app-api.pixiv.net/v1/illust/series?illust_series_id=1&offset=1"
+}
