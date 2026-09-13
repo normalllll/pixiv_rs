@@ -25,6 +25,7 @@ macro_rules! params {
 mod bookmarks;
 mod discovery;
 mod series;
+mod spotlight;
 pub use bookmarks::BookmarkPageOptions;
 pub use discovery::SearchAiMode;
 

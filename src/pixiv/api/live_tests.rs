@@ -232,3 +232,28 @@ async fn live_read_only() {
         .await;
     }
 }
+
+#[tokio::test]
+#[ignore = "Uses a real Pixiv account and network; run explicitly"]
+async fn live_spotlight() {
+    use crate::pixivision::SpotlightCategory;
+    let api = live_api();
+    let user_id = api.account().unwrap().user.id.parse::<u64>().unwrap();
+    checked(api.get_user_detail(user_id).await, "session validation").await;
+    for category in [SpotlightCategory::All, SpotlightCategory::Manga] {
+        let page = checked(
+            api.get_spotlight_article_page(category).await,
+            "Spotlight list",
+        )
+        .await;
+        assert!(!page.spotlight_articles.is_empty());
+        if let Some(url) = page.next_url {
+            let next = checked(
+                api.get_next_spotlight_article_page(url).await,
+                "Spotlight pagination",
+            )
+            .await;
+            assert!(!next.spotlight_articles.is_empty());
+        }
+    }
+}

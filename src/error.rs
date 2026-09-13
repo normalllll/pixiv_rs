@@ -10,6 +10,7 @@ pub enum PixivErrorKind {
     InvalidEndpoint,
     HttpStatus,
     MissingAccount,
+    Html,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

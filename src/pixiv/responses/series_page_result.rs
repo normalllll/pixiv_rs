@@ -70,7 +70,8 @@ mod tests {
     #[test]
     fn novel_series_preserves_metadata_chapters_and_cursor() {
         let page: NovelSeriesPageResult =
-            serde_json::from_str(include_str!("../../tests/fixtures/novel_series.json")).unwrap();
+            serde_json::from_str(include_str!("../../../tests/fixtures/novel_series.json"))
+                .unwrap();
         assert_eq!(page.novel_series_detail.id, 1);
         assert_eq!(page.novels.len(), 1);
         assert!(page.novel_series_first_novel.is_some());
@@ -88,7 +89,8 @@ mod tests {
     #[test]
     fn manga_series_preserves_cover_and_optional_comment_count() {
         let page: IllustSeriesPageResult =
-            serde_json::from_str(include_str!("../../tests/fixtures/illust_series.json")).unwrap();
+            serde_json::from_str(include_str!("../../../tests/fixtures/illust_series.json"))
+                .unwrap();
         assert_eq!(
             page.illust_series_detail.cover_image_urls.medium,
             "https://example.invalid/image.jpg"
