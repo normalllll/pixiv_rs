@@ -9,7 +9,8 @@ ammonia = "4.1.4"
 tokio = { version = "1", features = ["test-util", "full"] }
 tokio-util = "0.7.18"
 futures-util = "0.3.32"
-reqwest = { version = "0.13.4", default-features = false, features = ["rustls", "json", "stream", "http2", "form", "query", "socks", "system-proxy"] }
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "json", "stream", "http2", "form", "query", "socks", "system-proxy"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 base64 = "0.22.1"
 rand = "0.10"
 serde = { version = "1.0.228", features = ["derive"] }
