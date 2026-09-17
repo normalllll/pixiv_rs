@@ -135,7 +135,7 @@ async fn send_request(
 }
 
 fn download_client(proxy: Option<&str>) -> Result<Client, PixivError> {
-    let mut builder = Client::builder();
+    let mut builder = crate::http::client_builder();
 
     if let Some(proxy) = proxy {
         builder = builder.proxy(Proxy::all(proxy)?);

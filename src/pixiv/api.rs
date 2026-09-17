@@ -893,7 +893,7 @@ impl PixivApi {
         logical_host: &str,
         resolve_addr: Option<SocketAddr>,
     ) -> Result<Client, PixivError> {
-        let mut builder = Client::builder()
+        let mut builder = crate::http::client_builder()
             .connect_timeout(Duration::from_secs(5))
             .timeout(Duration::from_secs(5))
             .danger_accept_invalid_certs(self.config.accept_invalid_certs);

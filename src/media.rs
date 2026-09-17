@@ -35,7 +35,7 @@ fn client(proxy: Option<String>) -> Result<Client, String> {
     {
         return Ok(client.clone());
     }
-    let mut builder = Client::builder()
+    let mut builder = crate::http::client_builder()
         .user_agent("Mozilla/5.0")
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(15))

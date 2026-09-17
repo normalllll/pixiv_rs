@@ -22,7 +22,7 @@ impl FanboxApi {
         accept_invalid_certs: bool,
     ) -> Result<Self, PixivError> {
         let session = normalize_session(&session)?;
-        let mut builder = Client::builder()
+        let mut builder = crate::http::client_builder()
             .timeout(Duration::from_secs(45))
             .connect_timeout(Duration::from_secs(15))
             .danger_accept_invalid_certs(accept_invalid_certs)

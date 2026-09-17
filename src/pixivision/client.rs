@@ -33,7 +33,7 @@ pub struct PixivisionApi {
 
 impl PixivisionApi {
     pub fn new(config: PixivisionConfig) -> Result<Self, PixivError> {
-        let mut builder = Client::builder()
+        let mut builder = crate::http::client_builder()
             .connect_timeout(Duration::from_secs(10))
             .timeout(Duration::from_secs(30))
             .danger_accept_invalid_certs(config.accept_invalid_certs)
