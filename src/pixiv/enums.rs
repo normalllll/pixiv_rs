@@ -73,6 +73,36 @@ pub enum SearchTarget {
     TitleAndCaption,
 }
 
+/// How a novel search matches its word. The tag modes are shared with
+/// illustrations; `Text` searches the body and `Keyword` the keywords, and
+/// illustrations' title-and-caption mode is not valid for novels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SearchNovelTarget {
+    PartialMatchForTags,
+    ExactMatchForTags,
+    Text,
+    Keyword,
+}
+
+/// Which kinds of illustration-category works a search returns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SearchContentType {
+    Illust,
+    Manga,
+    Ugoira,
+    IllustAndUgoira,
+    IllustAndMangaAndUgoira,
+}
+
+/// The shape of the artwork. Not an arbitrary aspect ratio: each value is a
+/// band the server defines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SearchRatio {
+    Landscape,
+    Portrait,
+    Square,
+}
+
 pub trait PixivEnumParam {
     fn as_pixiv_param(&self) -> &'static str;
 }
@@ -172,6 +202,39 @@ impl PixivEnumParam for SearchTarget {
     }
 }
 
+impl PixivEnumParam for SearchNovelTarget {
+    fn as_pixiv_param(&self) -> &'static str {
+        match self {
+            Self::PartialMatchForTags => "partial_match_for_tags",
+            Self::ExactMatchForTags => "exact_match_for_tags",
+            Self::Text => "text",
+            Self::Keyword => "keyword",
+        }
+    }
+}
+
+impl PixivEnumParam for SearchContentType {
+    fn as_pixiv_param(&self) -> &'static str {
+        match self {
+            Self::Illust => "illust",
+            Self::Manga => "manga",
+            Self::Ugoira => "ugoira",
+            Self::IllustAndUgoira => "illust_and_ugoira",
+            Self::IllustAndMangaAndUgoira => "illust_and_manga_and_ugoira",
+        }
+    }
+}
+
+impl PixivEnumParam for SearchRatio {
+    fn as_pixiv_param(&self) -> &'static str {
+        match self {
+            Self::Landscape => "landscape",
+            Self::Portrait => "portrait",
+            Self::Square => "square",
+        }
+    }
+}
+
 macro_rules! impl_display_as_pixiv_param {
     ($($ty:ty),* $(,)?) => {
         $(
@@ -192,5 +255,24 @@ impl_display_as_pixiv_param!(
     IllustType,
     WorkType,
     SearchSort,
-    SearchTarget
+    SearchTarget,
+    SearchNovelTarget,
+    SearchContentType,
+    SearchRatio
 );
+
+#[cfg(test)]
+mod search_param_tests {
+    use super::*;
+
+    #[test]
+    fn search_enums_use_the_values_the_server_accepts() {
+        assert_eq!(SearchNovelTarget::Text.to_string(), "text");
+        assert_eq!(SearchNovelTarget::Keyword.to_string(), "keyword");
+        assert_eq!(
+            SearchContentType::IllustAndMangaAndUgoira.to_string(),
+            "illust_and_manga_and_ugoira"
+        );
+        assert_eq!(SearchRatio::Portrait.to_string(), "portrait");
+    }
+}

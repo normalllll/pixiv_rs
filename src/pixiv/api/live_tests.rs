@@ -257,3 +257,127 @@ async fn live_spotlight() {
         }
     }
 }
+
+#[tokio::test]
+#[ignore = "Uses a real Pixiv account and network; run explicitly"]
+async fn live_search_filters_and_previews() {
+    let api = live_api();
+    let word = "初音ミク".to_string();
+    let target = SearchTarget::PartialMatchForTags;
+
+    // Popular preview: one batch of at most 30, ordered by bookmarks, no next page.
+    let preview = checked(
+        api.get_search_popular_preview_illust(word.clone(), target, SearchOptions::default())
+            .await,
+        "illustration popular preview",
+    )
+    .await;
+    assert!(!preview.illusts.is_empty() && preview.illusts.len() <= 30);
+    assert!(preview.next_url.is_none());
+    assert!(
+        preview
+            .illusts
+            .windows(2)
+            .all(|pair| pair[0].total_bookmarks >= pair[1].total_bookmarks)
+    );
+
+    let novels = checked(
+        api.get_search_popular_preview_novel(
+            word.clone(),
+            SearchNovelTarget::PartialMatchForTags,
+            SearchOptions::default(),
+        )
+        .await,
+        "novel popular preview",
+    )
+    .await;
+    assert!(!novels.novels.is_empty() && novels.novels.len() <= 30);
+    assert!(novels.next_url.is_none());
+
+    // Novel targets that only novels have.
+    for novel_target in [SearchNovelTarget::Text, SearchNovelTarget::Keyword] {
+        let page = checked(
+            api.get_search_novel_page(
+                word.clone(),
+                SearchSort::DateDesc,
+                novel_target,
+                SearchOptions::default(),
+            )
+            .await,
+            "novel target",
+        )
+        .await;
+        assert!(!page.novels.is_empty());
+    }
+
+    // Illustration filters: every result satisfies the filter it was asked for.
+    let manga = checked(
+        api.get_search_illust_page(
+            word.clone(),
+            SearchSort::DateDesc,
+            target,
+            SearchOptions {
+                content_type: Some(SearchContentType::Manga),
+                ..Default::default()
+            },
+        )
+        .await,
+        "manga content type",
+    )
+    .await;
+    assert!(!manga.illusts.is_empty() && manga.illusts.iter().all(|i| i.kind == "manga"));
+
+    let portrait = checked(
+        api.get_search_illust_page(
+            word.clone(),
+            SearchSort::DateDesc,
+            target,
+            SearchOptions {
+                ratio: Some(SearchRatio::Portrait),
+                ..Default::default()
+            },
+        )
+        .await,
+        "portrait ratio",
+    )
+    .await;
+    assert!(!portrait.illusts.is_empty() && portrait.illusts.iter().all(|i| i.height > i.width));
+
+    let large = checked(
+        api.get_search_illust_page(
+            word.clone(),
+            SearchSort::DateDesc,
+            target,
+            SearchOptions {
+                width_min: Some(2000),
+                ..Default::default()
+            },
+        )
+        .await,
+        "minimum width",
+    )
+    .await;
+    assert!(!large.illusts.is_empty() && large.illusts.iter().all(|i| i.width >= 2000));
+
+    let tooled = checked(
+        api.get_search_illust_page(
+            word,
+            SearchSort::DateDesc,
+            target,
+            SearchOptions {
+                tool: Some("Photoshop".into()),
+                ..Default::default()
+            },
+        )
+        .await,
+        "tool",
+    )
+    .await;
+    assert!(
+        !tooled.illusts.is_empty()
+            && tooled
+                .illusts
+                .iter()
+                .all(|i| i.tools.iter().any(|tool| tool == "Photoshop"))
+    );
+}

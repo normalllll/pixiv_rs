@@ -8,7 +8,8 @@ use tokio::sync::Mutex;
 
 use crate::auth::{PixivAuth, PixivAuthConfig};
 use crate::enums::{
-    IllustRankingMode, IllustType, PixivEnumParam, Restrict, SearchSort, SearchTarget,
+    IllustRankingMode, IllustType, PixivEnumParam, Restrict, SearchContentType, SearchNovelTarget,
+    SearchRatio, SearchSort, SearchTarget,
 };
 use crate::error::{PixivError, PixivErrorKind};
 use crate::responses::*;
@@ -600,6 +601,41 @@ impl PixivApi {
         ]);
         push_optional(&mut query, "start_date", options.start_date);
         push_optional(&mut query, "end_date", options.end_date);
+        push_optional(
+            &mut query,
+            "content_type",
+            options.content_type.map(|value| value.to_string()),
+        );
+        push_optional(
+            &mut query,
+            "ratio_pattern",
+            options.ratio.map(|value| value.to_string()),
+        );
+        push_optional(
+            &mut query,
+            "width_min",
+            options.width_min.map(|value| value.to_string()),
+        );
+        push_optional(
+            &mut query,
+            "width_max",
+            options.width_max.map(|value| value.to_string()),
+        );
+        push_optional(
+            &mut query,
+            "height_min",
+            options.height_min.map(|value| value.to_string()),
+        );
+        push_optional(
+            &mut query,
+            "height_max",
+            options.height_max.map(|value| value.to_string()),
+        );
+        push_optional(
+            &mut query,
+            "tool",
+            options.tool.filter(|tool| !tool.trim().is_empty()),
+        );
 
         discovery::push_search_ai(&mut query, ai_mode);
 
@@ -607,11 +643,55 @@ impl PixivApi {
             .await
     }
 
+    /// One batch (at most 30) of the most bookmarked illustration-category
+    /// works for a word, in the server's order. It has no next page, and only
+    /// the word, target, date range and bookmark tag shape it; the other
+    /// [`SearchOptions`] belong to [`Self::get_search_illust_page`].
+    pub async fn get_search_popular_preview_illust(
+        &self,
+        word: String,
+        target: SearchTarget,
+        options: SearchOptions,
+    ) -> Result<SearchIllustPageResult, PixivError> {
+        let mut query = params!([
+            ("filter", "for_android"),
+            ("include_translated_tag_results", true.to_string()),
+            ("merge_plain_keyword_results", true.to_string()),
+            ("word", search_word(&word, options.bookmark_total)),
+            ("search_target", target.to_string()),
+        ]);
+        push_optional(&mut query, "start_date", options.start_date);
+        push_optional(&mut query, "end_date", options.end_date);
+
+        self.get_json(Endpoint::AppApi, "/v1/search/popular-preview/illust", query)
+            .await
+    }
+
+    /// The novel counterpart of [`Self::get_search_popular_preview_illust`].
+    pub async fn get_search_popular_preview_novel(
+        &self,
+        word: String,
+        target: SearchNovelTarget,
+        options: SearchOptions,
+    ) -> Result<SearchNovelPageResult, PixivError> {
+        let mut query = params!([
+            ("include_translated_tag_results", true.to_string()),
+            ("merge_plain_keyword_results", true.to_string()),
+            ("word", search_word(&word, options.bookmark_total)),
+            ("search_target", target.to_string()),
+        ]);
+        push_optional(&mut query, "start_date", options.start_date);
+        push_optional(&mut query, "end_date", options.end_date);
+
+        self.get_json(Endpoint::AppApi, "/v1/search/popular-preview/novel", query)
+            .await
+    }
+
     pub async fn get_search_novel_page(
         &self,
         word: String,
         sort: SearchSort,
-        target: SearchTarget,
+        target: SearchNovelTarget,
         options: SearchOptions,
     ) -> Result<SearchNovelPageResult, PixivError> {
         let mut query = params!([
@@ -1005,6 +1085,15 @@ pub struct SearchOptions {
     pub start_date: Option<String>,
     pub end_date: Option<String>,
     pub bookmark_total: Option<u64>,
+    /// Illustration search only, like the four size bounds, `ratio` and
+    /// `tool` below.
+    pub content_type: Option<SearchContentType>,
+    pub ratio: Option<SearchRatio>,
+    pub width_min: Option<u32>,
+    pub width_max: Option<u32>,
+    pub height_min: Option<u32>,
+    pub height_max: Option<u32>,
+    pub tool: Option<String>,
 }
 
 impl SearchOptions {
