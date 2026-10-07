@@ -5,20 +5,20 @@ edition = "2024"
 
 [dependencies]
 scraper = { version = "0.27.0", default-features = false }
-ammonia = "4.1.4"
+ammonia = "4.2.1"
 tokio = { version = "1", features = ["test-util", "full"] }
-tokio-util = "0.7.18"
-futures-util = "0.3.32"
-reqwest = { version = "0.13.4", default-features = false, features = ["rustls-no-provider", "json", "stream", "http2", "form", "query", "socks", "system-proxy"] }
+tokio-util = "0.7.19"
+futures-util = "0.3.34"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "json", "stream", "http2", "form", "query", "socks", "system-proxy"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
-base64 = "0.22.1"
+base64 = "0.23.1"
 rand = "0.10"
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.11.0"
 url = "2.5"
 async-stream = "0.3.6"
-futures-core = "0.3.32"
+futures-core = "0.3.34"
 
 [target.'cfg(target_os = "android")'.dependencies]
 webpki-root-certs = "1"
