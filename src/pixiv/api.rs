@@ -746,7 +746,12 @@ impl PixivApi {
             (format!("{work}_id"), id.to_string()),
             ("restrict", options.restrict.to_string()),
         ]);
-        form.extend(options.tags.into_iter().map(|tag| ("tags".to_owned(), tag)));
+        form.extend(
+            options
+                .tags
+                .into_iter()
+                .map(|tag| ("tags[]".to_owned(), tag)),
+        );
 
         self.request_text(
             Endpoint::AppApi,
