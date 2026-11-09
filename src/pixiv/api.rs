@@ -25,10 +25,12 @@ macro_rules! params {
 
 mod bookmarks;
 mod discovery;
+mod profile;
 mod series;
 mod spotlight;
 pub use bookmarks::BookmarkPageOptions;
 pub use discovery::SearchAiMode;
+pub use profile::{UserProfileEdit, UserWorkspaceEdit};
 
 const APP_API_HOST: &str = "app-api.pixiv.net";
 const SKETCH_HOST: &str = "sketch.pixiv.net";
@@ -1047,6 +1049,14 @@ impl PixivApi {
             RequestBody::Form(form) => {
                 builder = builder.form(form);
             }
+            RequestBody::Multipart(fields) => {
+                let form = fields
+                    .iter()
+                    .fold(reqwest::multipart::Form::new(), |form, (key, value)| {
+                        form.text(key.clone(), value.clone())
+                    });
+                builder = builder.multipart(form);
+            }
         }
 
         let response = builder.send().await?;
@@ -1180,6 +1190,7 @@ impl Endpoint {
 enum RequestBody {
     None,
     Form(Params),
+    Multipart(Params),
 }
 
 struct ApiRequest {

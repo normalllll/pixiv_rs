@@ -66,6 +66,11 @@ impl PixivApi {
         )
         .await
     }
+    pub async fn get_ai_show_settings(&self) -> Result<AiShowSettingsResult, PixivError> {
+        self.get_json(Endpoint::AppApi, "/v1/user/ai-show-settings", Vec::new())
+            .await
+    }
+
     /// Updates the account-wide AI visibility preference on Pixiv.
     pub async fn post_ai_show_settings(&self, mode: SearchAiMode) -> Result<String, PixivError> {
         let show = match mode {

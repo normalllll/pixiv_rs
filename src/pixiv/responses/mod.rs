@@ -46,3 +46,5 @@ mod series_page_result;
 pub use series_page_result::*;
 mod work_bookmark_detail_result;
 pub use work_bookmark_detail_result::*;
+mod user_settings_results;
+pub use user_settings_results::*;
