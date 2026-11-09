@@ -64,6 +64,37 @@ pub struct SeriesCoverImageUrls {
     pub medium: String,
 }
 
+/// The series the account follows up, manga or novels.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WatchlistPageResult {
+    pub series: Vec<WatchlistSeries>,
+    pub next_url: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WatchlistSeries {
+    pub id: u64,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub url: Option<String>,
+    /// Pixiv's reason when the series cannot be shown.
+    #[serde(default)]
+    pub mask_text: Option<String>,
+    #[serde(default)]
+    pub user: Option<User>,
+    #[serde(default)]
+    pub published_content_count: u64,
+    #[serde(default)]
+    pub last_published_content_datetime: Option<String>,
+}
+
+impl PageList for WatchlistPageResult {
+    fn next_url(&self) -> Option<&str> {
+        self.next_url.as_deref()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
