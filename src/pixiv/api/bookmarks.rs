@@ -81,6 +81,33 @@ impl PixivApi {
         )
         .await
     }
+
+    /// Saves the reading position; `page` is the 1-based `[newpage]` section.
+    pub async fn post_novel_marker_add(
+        &self,
+        novel_id: u64,
+        page: u32,
+    ) -> Result<String, PixivError> {
+        self.request_text(
+            Endpoint::AppApi,
+            Method::POST,
+            "/v1/novel/marker/add",
+            Vec::new(),
+            RequestBody::Form(params!([("novel_id", novel_id), ("page", page)])),
+        )
+        .await
+    }
+
+    pub async fn post_novel_marker_delete(&self, novel_id: u64) -> Result<String, PixivError> {
+        self.request_text(
+            Endpoint::AppApi,
+            Method::POST,
+            "/v1/novel/marker/delete",
+            Vec::new(),
+            RequestBody::Form(params!([("novel_id", novel_id)])),
+        )
+        .await
+    }
 }
 
 #[cfg(test)]
