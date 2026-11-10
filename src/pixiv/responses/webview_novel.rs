@@ -121,7 +121,6 @@ pub struct WebviewNovelImageUrls {
     pub original: Option<String>,
 }
 
-
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NovelNavigationInfo {
@@ -288,8 +287,6 @@ where
     }
 }
 
-
-
 fn deserialize_string_like<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
@@ -305,9 +302,7 @@ where
     }
 }
 
-fn deserialize_optional_string_like<'de, D>(
-    deserializer: D,
-) -> Result<Option<String>, D::Error>
+fn deserialize_optional_string_like<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
     D: Deserializer<'de>,
 {

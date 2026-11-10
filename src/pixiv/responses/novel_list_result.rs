@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::models::Novel;
+use serde::{Deserialize, Serialize};
 
 use super::PageList;
 
