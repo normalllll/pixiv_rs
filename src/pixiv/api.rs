@@ -33,8 +33,6 @@ pub use discovery::SearchAiMode;
 pub use profile::{UserProfileEdit, UserWorkspaceEdit};
 
 const APP_API_HOST: &str = "app-api.pixiv.net";
-const SKETCH_HOST: &str = "sketch.pixiv.net";
-const SKETCH_IP: &str = "210.140.170.179";
 const API_USER_AGENT: &str = "PixivAndroidApp/6.184.0 (Android 15.0; {device})";
 const REFRESH_TOKEN_MIN_INTERVAL: Duration = Duration::from_secs(60);
 
@@ -1166,14 +1164,12 @@ pub struct CommentAddOptions {
 #[derive(Debug, Clone, Copy)]
 enum Endpoint {
     AppApi,
-    Sketch,
 }
 
 impl Endpoint {
     fn logical_host(self) -> &'static str {
         match self {
             Self::AppApi => APP_API_HOST,
-            Self::Sketch => SKETCH_HOST,
         }
     }
 
@@ -1181,7 +1177,6 @@ impl Endpoint {
     fn direct_ip_addr(self, api: &PixivApi) -> Option<SocketAddr> {
         match self {
             Self::AppApi => resolve_addr(&api.config.target_ip),
-            Self::Sketch => resolve_addr(SKETCH_IP),
         }
     }
 }

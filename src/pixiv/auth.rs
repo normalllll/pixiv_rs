@@ -112,7 +112,7 @@ impl PixivAuth {
     pub fn generate_login_url(&self) -> String {
         format!(
             "https://app-api.pixiv.net/web/v1/login?code_challenge={}&code_challenge_method=S256&client=pixiv-android",
-            &self.code_challenge
+            self.code_challenge
         )
     }
 

@@ -200,12 +200,12 @@ fn temp_path_for(path: &Path) -> PathBuf {
 
 async fn move_file_with_fallback(from: &Path, to: &Path) -> Result<(), PixivError> {
     match fs::rename(from, to).await {
-        Ok(_) => return Ok(()),
+        Ok(_) => Ok(()),
         Err(first_rename_error) => {
             remove_file_if_exists(to).await?;
 
             match fs::rename(from, to).await {
-                Ok(_) => return Ok(()),
+                Ok(_) => Ok(()),
                 Err(second_rename_error) => {
                     if let Err(copy_error) = fs::copy(from, to).await {
                         let _ = fs::remove_file(to).await;
@@ -285,12 +285,12 @@ pub fn download_to_file(
 
         let tmp_path = temp_path_for(&path);
 
-        if let Some(parent) = path.parent() {
-            if !parent.as_os_str().is_empty() {
-                fs::create_dir_all(parent)
-                    .await
-                    .map_err(|error| io_error("Create parent dir failed", error))?;
-            }
+        if let Some(parent) = path.parent()
+            && !parent.as_os_str().is_empty()
+        {
+            fs::create_dir_all(parent)
+                .await
+                .map_err(|error| io_error("Create parent dir failed", error))?;
         }
 
         remove_file_if_exists(&tmp_path).await?;
