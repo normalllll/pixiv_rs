@@ -48,6 +48,13 @@ impl PixivError {
         self
     }
 
+    /// Pixiv's message for one request field (such as `profile_image`), read
+    /// from the error body, when the body carries one.
+    pub fn field_message(&self, field: &str) -> Option<String> {
+        let message = serde_json::from_str::<crate::ErrorMessage>(self.body.as_deref()?).ok()?;
+        message.error.user_message_details?.remove(field)
+    }
+
     pub fn missing_account() -> Self {
         Self::new(
             PixivErrorKind::MissingAccount,
@@ -123,4 +130,27 @@ fn raw_reqwest_error(error: &reqwest::Error) -> String {
     }
 
     lines.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn field_message_reads_the_named_field() {
+        let error = PixivError::http_status(
+            400,
+            r#"{"error":{"user_message_details":{"profile_image":"bad","x":["a","b"]}}}"#.into(),
+        );
+        assert_eq!(error.field_message("profile_image").as_deref(), Some("bad"));
+        assert_eq!(error.field_message("x").as_deref(), Some("a\nb"));
+        assert_eq!(error.field_message("missing"), None);
+    }
+
+    #[test]
+    fn field_message_tolerates_other_bodies() {
+        let html = PixivError::http_status(502, "<html>".into());
+        assert_eq!(html.field_message("profile_image"), None);
+        assert_eq!(PixivError::missing_account().field_message("x"), None);
+    }
 }
