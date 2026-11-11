@@ -6,16 +6,6 @@ pub enum SearchAiMode {
     Show,
 }
 
-pub(super) fn push_search_ai(query: &mut Params, mode: Option<SearchAiMode>) {
-    if let Some(mode) = mode {
-        let value = match mode {
-            SearchAiMode::Hide => "0",
-            SearchAiMode::Show => "1",
-        };
-        query.push(("search_ai_type".into(), value.into()));
-    }
-}
-
 fn ranking_query(mode: String, date: String) -> Params {
     params!([("filter", "for_android"), ("mode", mode), ("date", date)])
 }
@@ -85,21 +75,5 @@ impl PixivApi {
             RequestBody::Form(params!([("show_ai", show)])),
         )
         .await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn hiding_ai_sends_zero_instead_of_omitting_filter() {
-        let mut query = Vec::new();
-        push_search_ai(&mut query, None);
-        assert!(query.is_empty());
-        push_search_ai(&mut query, Some(SearchAiMode::Hide));
-        assert_eq!(query, vec![("search_ai_type".into(), "0".into())]);
-        query.clear();
-        push_search_ai(&mut query, Some(SearchAiMode::Show));
-        assert_eq!(query[0].1, "1");
     }
 }

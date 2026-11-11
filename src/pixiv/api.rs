@@ -27,7 +27,6 @@ mod bookmarks;
 mod discovery;
 mod profile;
 mod series;
-mod spotlight;
 pub use bookmarks::BookmarkPageOptions;
 pub use discovery::SearchAiMode;
 pub use profile::{UserProfileEdit, UserWorkspaceEdit};
@@ -474,7 +473,7 @@ impl PixivApi {
         })
     }
 
-    pub async fn get_novel_html(&self, novel_id: u64) -> Result<String, PixivError> {
+    async fn get_novel_html(&self, novel_id: u64) -> Result<String, PixivError> {
         self.request_text(
             Endpoint::AppApi,
             Method::GET,
@@ -579,18 +578,6 @@ impl PixivApi {
         target: SearchTarget,
         options: SearchOptions,
     ) -> Result<SearchIllustPageResult, PixivError> {
-        self.get_search_illust_page_with_ai(word, sort, target, options, None)
-            .await
-    }
-
-    pub async fn get_search_illust_page_with_ai(
-        &self,
-        word: String,
-        sort: SearchSort,
-        target: SearchTarget,
-        options: SearchOptions,
-        ai_mode: Option<SearchAiMode>,
-    ) -> Result<SearchIllustPageResult, PixivError> {
         let mut query = params!([
             ("filter", "for_android"),
             ("include_translated_tag_results", true.to_string()),
@@ -636,8 +623,6 @@ impl PixivApi {
             "tool",
             options.tool.filter(|tool| !tool.trim().is_empty()),
         );
-
-        discovery::push_search_ai(&mut query, ai_mode);
 
         self.get_json(Endpoint::AppApi, "/v1/search/illust", query)
             .await

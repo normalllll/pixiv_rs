@@ -236,33 +236,3 @@ pub struct ArticleEmbed {
     pub title: Option<String>,
     pub poster: Option<String>,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SpotlightCategory {
-    All,
-    Manga,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SpotlightPage {
-    pub spotlight_articles: Vec<SpotlightArticle>,
-    pub next_url: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct SpotlightArticle {
-    pub id: u64,
-    pub title: String,
-    pub pure_title: Option<String>,
-    pub thumbnail: String,
-    pub article_url: String,
-    pub publish_date: String,
-    pub category: String,
-    pub subcategory_label: Option<String>,
-}
-
-impl crate::responses::PageList for SpotlightPage {
-    fn next_url(&self) -> Option<&str> {
-        self.next_url.as_deref()
-    }
-}

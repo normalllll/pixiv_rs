@@ -183,15 +183,6 @@ async fn live_fanbox() {
                 .unwrap()
                 .is_empty()
         );
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
-        let path = format!(".local/fanbox-test-media-{stamp}.bin");
-        api.download_media(image.original_url.clone(), path.clone())
-            .await
-            .unwrap();
-        assert!(std::fs::metadata(path).unwrap().len() > 0);
     }
     println!("FANBOX read-only endpoints passed; no account or response data logged");
 }

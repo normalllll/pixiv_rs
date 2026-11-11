@@ -3,7 +3,7 @@ use crate::{PixivError, PixivErrorKind};
 use reqwest::{Client, Method, Url};
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
-use tokio::{io::AsyncWriteExt, sync::Mutex};
+use tokio::sync::Mutex;
 
 /// One immutable session per client; create a new client when switching accounts.
 #[derive(Clone)]
@@ -288,7 +288,7 @@ impl FanboxApi {
         self.mutate("post.deleteComment", json!({"commentId":comment_id}))
             .await
     }
-    pub async fn refresh_csrf_token(&self) -> Result<(), PixivError> {
+    pub(crate) async fn refresh_csrf_token(&self) -> Result<(), PixivError> {
         let mut guard = self.csrf.lock().await;
         let response = self
             .auth(self.client.get("https://www.fanbox.cc/"))
@@ -332,52 +332,6 @@ impl FanboxApi {
             bytes.extend_from_slice(&chunk)
         }
         Ok(bytes)
-    }
-    pub async fn download_media(&self, url: String, path: String) -> Result<(), PixivError> {
-        let url = media_url(&url)?;
-        let request = self
-            .client
-            .get(url.clone())
-            .header("Referer", "https://www.fanbox.cc/");
-        let request = if url
-            .host_str()
-            .is_some_and(|h| h == "fanbox.cc" || h.ends_with(".fanbox.cc"))
-        {
-            self.auth(request)
-        } else {
-            request
-        };
-        let mut response = request.send().await.map_err(network)?;
-        check_status(response.status().as_u16())?;
-        let temporary = format!("{path}.part");
-        let mut file = tokio::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temporary)
-            .await
-            .map_err(|_| invalid("Cannot create download file"))?;
-        let result = async {
-            while let Some(chunk) = response.chunk().await.map_err(network)? {
-                file.write_all(&chunk)
-                    .await
-                    .map_err(|_| invalid("Cannot write download file"))?;
-            }
-            file.flush()
-                .await
-                .map_err(|_| invalid("Cannot flush download file"))?;
-            drop(file);
-            if tokio::fs::try_exists(&path).await.unwrap_or(true) {
-                return Err(invalid("Download destination exists"));
-            }
-            tokio::fs::rename(&temporary, &path)
-                .await
-                .map_err(|_| invalid("Cannot finish download"))
-        }
-        .await;
-        if result.is_err() {
-            let _ = tokio::fs::remove_file(&temporary).await;
-        }
-        result
     }
     fn auth(&self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         request
