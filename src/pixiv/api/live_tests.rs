@@ -357,6 +357,7 @@ fn profile_edit(detail: &UserDetailResult) -> UserProfileEdit {
         twitter: profile.twitter_account.clone().unwrap_or_default(),
         comment: detail.user.comment.clone().unwrap_or_default(),
         birthday: profile.birth.clone(),
+        profile_image: None,
     }
 }
 
@@ -481,6 +482,138 @@ async fn live_profile_edit() {
     report_diff(&mut run, "RESTORED profile and workspace", &diff);
     finish_snapshot(restored && diff.is_empty());
     assert!(run.failures.is_empty(), "Failures: {:?}", run.failures);
+}
+
+/// A solid grey baseline JPEG, built by hand so the test needs no image crate.
+/// Every 8x8 block carries only a DC value and an end-of-block marker.
+fn solid_jpeg(size: u16) -> Vec<u8> {
+    fn segment(marker: u8, body: &[u8]) -> Vec<u8> {
+        let mut out = vec![0xFF, marker];
+        out.extend(((body.len() + 2) as u16).to_be_bytes());
+        out.extend(body);
+        out
+    }
+    let mut out = vec![0xFF, 0xD8];
+    let mut quant = vec![0u8];
+    quant.extend([1u8; 64]);
+    out.extend(segment(0xDB, &quant));
+    let mut frame = vec![8];
+    frame.extend(size.to_be_bytes());
+    frame.extend(size.to_be_bytes());
+    frame.extend([1, 1, 0x11, 0]);
+    out.extend(segment(0xC0, &frame));
+    // DC: symbol 0 is code `0`, symbol 10 is code `10`. AC: only end-of-block.
+    let mut dc = vec![0x00, 1, 1];
+    dc.extend([0; 14]);
+    dc.extend([0, 10]);
+    out.extend(segment(0xC4, &dc));
+    let mut ac = vec![0x10, 1];
+    ac.extend([0; 15]);
+    ac.push(0);
+    out.extend(segment(0xC4, &ac));
+    out.extend(segment(0xDA, &[1, 1, 0x00, 0, 63, 0]));
+
+    let blocks = (size as usize).div_ceil(8).pow(2);
+    let mut bits = Vec::new();
+    // First block: DC category 10 holding 576 (mid grey, 200), then end-of-block.
+    bits.extend([1, 0]);
+    bits.extend((0..10).rev().map(|shift| (576u16 >> shift) & 1));
+    bits.push(0);
+    for _ in 1..blocks {
+        bits.extend([0, 0]);
+    }
+    while bits.len() % 8 != 0 {
+        bits.push(1);
+    }
+    for byte in bits.chunks(8) {
+        let value = byte.iter().fold(0u8, |acc, bit| (acc << 1) | *bit as u8);
+        out.push(value);
+        if value == 0xFF {
+            out.push(0x00);
+        }
+    }
+    out.extend([0xFF, 0xD9]);
+    out
+}
+
+async fn profile_image_url(api: &PixivApi, id: u64) -> String {
+    api.get_user_detail(id)
+        .await
+        .unwrap_or_else(|e| panic!("detail: {}", error_detail(&e)))
+        .user
+        .profile_image_urls
+        .medium
+}
+
+async fn download_bytes(url: &str) -> Vec<u8> {
+    use futures_util::StreamExt;
+    let mut stream = crate::download::download_to_memory(url.to_owned(), None).expect("download");
+    while let Some(event) = stream.next().await {
+        if let crate::download::DownloadEvent::Done { output } = event.expect("download event") {
+            return output;
+        }
+    }
+    panic!("download ended without data");
+}
+
+fn profile_image_upload(bytes: Vec<u8>, file_name: &str) -> ProfileImageUpload {
+    ProfileImageUpload {
+        bytes,
+        file_name: file_name.to_owned(),
+        mime: "image/jpeg".to_owned(),
+    }
+}
+
+/// Backs up the current profile image, uploads a generated one, then uploads
+/// the backup. The user detail only exposes the `medium` image URL, so that is
+/// the backup that gets restored. The backup stays in `.local/` afterwards.
+#[tokio::test]
+#[ignore = "Changes a real Pixiv account and restores it; run explicitly"]
+async fn live_profile_image_round_trip() {
+    let api = freepiv_api().await;
+    let id = api.account().unwrap().user.id.parse::<u64>().unwrap();
+    let typed = api
+        .get_user_detail(id)
+        .await
+        .unwrap_or_else(|e| panic!("detail: {}", error_detail(&e)));
+    let url_before = typed.user.profile_image_urls.medium.clone();
+    let backup = download_bytes(&url_before).await;
+    let backup_path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(".local/profile-image-backup.jpg");
+    std::fs::write(&backup_path, &backup).expect("Write profile image backup");
+    println!("INFO backup saved, {} bytes", backup.len());
+    let original = profile_edit(&typed);
+
+    let upload = UserProfileEdit {
+        profile_image: Some(profile_image_upload(solid_jpeg(256), "test.jpg")),
+        ..original.clone()
+    };
+    let uploaded = api.post_user_profile_edit(upload).await;
+    tokio::time::sleep(Duration::from_millis(3000)).await;
+    if let Err(e) = &uploaded {
+        println!(
+            "ERROR upload: {} field={:?}",
+            error_detail(e),
+            e.field_message("profile_image")
+        );
+    }
+    let url_after = profile_image_url(&api, id).await;
+
+    let restore = UserProfileEdit {
+        profile_image: Some(profile_image_upload(backup, "backup.jpg")),
+        ..original
+    };
+    let restored = api.post_user_profile_edit(restore).await;
+    tokio::time::sleep(Duration::from_millis(3000)).await;
+    let url_restored = profile_image_url(&api, id).await;
+
+    assert!(uploaded.is_ok(), "upload was rejected");
+    assert_ne!(url_before, url_after, "the upload did not change the image");
+    assert!(restored.is_ok(), "restore was rejected; see the backup");
+    assert_ne!(
+        url_after, url_restored,
+        "the restore did not change the image"
+    );
 }
 
 fn snapshot_path() -> String {

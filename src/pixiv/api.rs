@@ -29,7 +29,7 @@ mod profile;
 mod series;
 pub use bookmarks::BookmarkPageOptions;
 pub use discovery::SearchAiMode;
-pub use profile::{UserProfileEdit, UserWorkspaceEdit};
+pub use profile::{ProfileImageUpload, UserProfileEdit, UserWorkspaceEdit};
 
 const APP_API_HOST: &str = "app-api.pixiv.net";
 const API_USER_AGENT: &str = "PixivAndroidApp/6.184.0 (Android 15.0; {device})";
@@ -1033,11 +1033,25 @@ impl PixivApi {
                 builder = builder.form(form);
             }
             RequestBody::Multipart(fields) => {
-                let form = fields
-                    .iter()
-                    .fold(reqwest::multipart::Form::new(), |form, (key, value)| {
-                        form.text(key.clone(), value.clone())
-                    });
+                let mut form = reqwest::multipart::Form::new();
+                for field in fields {
+                    form = match field {
+                        MultipartField::Text { name, value } => {
+                            form.text(name.clone(), value.clone())
+                        }
+                        MultipartField::File {
+                            name,
+                            file_name,
+                            mime,
+                            bytes,
+                        } => {
+                            let part = reqwest::multipart::Part::bytes(bytes.clone())
+                                .file_name(file_name.clone())
+                                .mime_str(mime)?;
+                            form.part(name.clone(), part)
+                        }
+                    };
+                }
                 builder = builder.multipart(form);
             }
         }
@@ -1170,7 +1184,21 @@ impl Endpoint {
 enum RequestBody {
     None,
     Form(Params),
-    Multipart(Params),
+    Multipart(Vec<MultipartField>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum MultipartField {
+    Text {
+        name: String,
+        value: String,
+    },
+    File {
+        name: String,
+        file_name: String,
+        mime: String,
+        bytes: Vec<u8>,
+    },
 }
 
 struct ApiRequest {
