@@ -39,7 +39,12 @@ fn client(proxy: Option<String>) -> Result<Client, String> {
         .user_agent("Mozilla/5.0")
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(Duration::from_secs(15))
-        .read_timeout(Duration::from_secs(45));
+        .read_timeout(Duration::from_secs(45))
+        // Each picture gets its own connection. Over HTTP/2 every picture
+        // in flight shares one TCP connection, whose throughput a slow or
+        // proxied route caps well below what parallel connections reach.
+        .http1_only()
+        .pool_max_idle_per_host(16);
     if let Some(proxy) = &proxy {
         builder = builder.proxy(reqwest::Proxy::all(proxy).map_err(|_| "Invalid media proxy")?);
     }
@@ -103,4 +108,49 @@ pub fn stream_media(
         if received == 0 { Err("Empty media response")?; }
         if total.is_some_and(|expected| received != expected) { Err("Incomplete media response")?; }
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::io::AsyncReadExt;
+
+    /// The TLS ClientHello of a media request, read by a local listener that
+    /// never answers it.
+    async fn media_client_hello() -> Vec<u8> {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let hello = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut bytes = vec![0; 4096];
+            let read = socket.read(&mut bytes).await.unwrap();
+            bytes.truncate(read);
+            bytes
+        });
+        let mut stream = stream_media(
+            format!("https://127.0.0.1:{port}/picture.jpg"),
+            None,
+            HashMap::new(),
+        )
+        .unwrap();
+        // The request is sent when the stream is first polled; it fails once
+        // the listener hangs up.
+        let (hello, response) = tokio::join!(hello, stream.next());
+        assert!(response.unwrap().is_err());
+        hello.unwrap()
+    }
+
+    fn contains(haystack: &[u8], needle: &[u8]) -> bool {
+        haystack
+            .windows(needle.len())
+            .any(|window| window == needle)
+    }
+
+    #[tokio::test]
+    async fn media_requests_offer_only_http1() {
+        let hello = media_client_hello().await;
+        // ALPN names are length-prefixed: 8 "http/1.1", 2 "h2".
+        assert!(contains(&hello, b"\x08http/1.1"));
+        assert!(!contains(&hello, b"\x02h2"));
+    }
 }
